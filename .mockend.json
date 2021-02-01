@@ -1,9 +1,0 @@
-{
-  "Data": {
-    "records": "Record[]"
-  },
-  "Record": {
-    "chatID": "int",
-    "schedule": "string"
-  }
-}
