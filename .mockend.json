@@ -1,6 +1,8 @@
 {
-  "Data": "Register[]",
-  "Register": {
+  "Data": {
+    "records": "Record[]"
+  },
+  "Record": {
     "chatID": "123",
     "schedule": "17:00"
   }
