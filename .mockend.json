@@ -3,7 +3,7 @@
     "records": "Record[]"
   },
   "Record": {
-    "chatID": "123",
-    "schedule": "17:00"
+    "chatID": "int",
+    "schedule": "string"
   }
 }
