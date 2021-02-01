@@ -1,13 +1,7 @@
 {
-  "Post": {
-    "title": "string",
-    "views": "int",
-    "published": "boolean",
-    "createdAt": "date",
-    "comments": "Comment[]"
-  },
-  "Comment": {
-    "body": "string",
-    "post": "Post"
+  "Data": "Register[]",
+  "Register": {
+    "chatID": "123",
+    "schedule": "17:00"
   }
 }
