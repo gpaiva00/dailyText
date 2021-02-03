@@ -6,11 +6,11 @@ import schedule
 import time
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from telegram import KeyboardButton, ReplyKeyboardMarkup
-from config.settings import WOL_URL, WOL_DAILY_TEXT_PATH, TELEGRAM_TOKEN, PORT, SCHEDULES_TIME, REDIS_URL, REDIS_PORT, REDIS_DB
+from config.settings import WOL_URL, WOL_DAILY_TEXT_PATH, TELEGRAM_TOKEN, PORT, SCHEDULES_TIME, REDIS_URL
 from utils.listToString import listToString
 from datetime import date, datetime
 
-db = redis.StrictRedis(host=REDIS_URL, port=REDIS_PORT, db=REDIS_DB, decode_responses=True)
+db = redis.StrictRedis(host=REDIS_URL, decode_responses=True)
 
 # setting a logging to know when (and why) things don't work as expected
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -163,14 +163,14 @@ def main():
   dp.add_handler(MessageHandler(Filters.text, handleScheduleOption))
 
   # start the bot
-  # updater.start_webhook(listen='0.0.0.0', port=PORT, url_path=TELEGRAM_TOKEN)
-  # updater.bot.setWebhook('https://daily-text-jw.herokuapp.com/'+TELEGRAM_TOKEN)
+  updater.start_webhook(listen='0.0.0.0', port=PORT, url_path=TELEGRAM_TOKEN)
+  updater.bot.setWebhook('https://daily-text-jw.herokuapp.com/'+TELEGRAM_TOKEN)
 
   # Run the bot until you press Ctrl-C or the process receives SIGINT,
   # SIGTERM or SIGABRT. This should be used most of the time, since
   # start_polling() is non-blocking and will stop the bot gracefully.
-  # updater.idle()
-  updater.start_polling()
+  updater.idle()
+  # updater.start_polling()
   
   # start scheduler
   startScheduler()
