@@ -11,6 +11,7 @@ TELEGRAM_TOKEN=os.getenv('TELEGRAM_TOKEN')
 PORT=int(os.getenv('PORT', '5000'))
 
 REDIS_URL=os.getenv('REDIS_URL')
+REDIS_TLS_URL=os.getenv('REDIS_TLS_URL', 'redis://localhost:6379')
 REDIS_PORT=os.getenv('REDIS_PORT', '6379')
 REDIS_DB=int(os.getenv('REDIS_DB', 0))
 
