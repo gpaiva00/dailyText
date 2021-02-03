@@ -4,13 +4,15 @@ import logging
 import re
 import schedule
 import time
+from urllib.parse import urlparse
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from telegram import KeyboardButton, ReplyKeyboardMarkup
 from config.settings import WOL_URL, WOL_DAILY_TEXT_PATH, TELEGRAM_TOKEN, PORT, SCHEDULES_TIME, REDIS_URL
 from utils.listToString import listToString
 from datetime import date, datetime
 
-db = redis.from_url(REDIS_URL)
+redis_url = urlparse(REDIS_URL)
+db = redis.Redis(host=redis_url.hostname, port=redis_url.port, username=redis_url.username, password=redis_url.password, ssl=True, ssl_cert_reqs=None, decode_responses=True)
 
 # setting a logging to know when (and why) things don't work as expected
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
