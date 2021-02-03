@@ -9,6 +9,7 @@ WOL_URL=os.getenv('WOL_URL')
 WOL_DAILY_TEXT_PATH=os.getenv('WOL_DAILY_TEXT_PATH')
 TELEGRAM_TOKEN=os.getenv('TELEGRAM_TOKEN')
 PORT=int(os.getenv('PORT', '5000'))
+HEROKU_APP_URL=os.getenv('HEROKU_APP_URL')
 
 REDIS_URL=os.getenv('REDIS_URL')
 REDIS_TLS_URL=os.getenv('REDIS_TLS_URL', 'redis://localhost:6379')

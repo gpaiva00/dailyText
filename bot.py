@@ -6,10 +6,13 @@ import schedule
 import time
 from urllib.parse import urlparse
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-from telegram import KeyboardButton, ReplyKeyboardMarkup
-from config.settings import WOL_URL, WOL_DAILY_TEXT_PATH, TELEGRAM_TOKEN, PORT, SCHEDULES_TIME, REDIS_TLS_URL
+from config.settings import WOL_URL, WOL_DAILY_TEXT_PATH, TELEGRAM_TOKEN, \
+  PORT, SCHEDULES_TIME, REDIS_TLS_URL, HEROKU_APP_URL
 from utils.listToString import listToString
-from datetime import date, datetime
+from utils.messages import getGreetingMessage, getAdjustingScheduleMessage, \
+  getUnknownScheduleOptionMessage, getNotInSchedulesMessage, getSetInScheduleMessage, getUnknownCommandMessage
+from utils.keyboardButtons import getDefaultKeyboardButtons, getScheduleButtons
+from utils.times import getToday, getNow
 
 redis_url = urlparse(REDIS_TLS_URL)
 db = redis.Redis(host=redis_url.hostname, port=redis_url.port, username=redis_url.username, password=redis_url.password, ssl=True, ssl_cert_reqs=None, decode_responses=True)
@@ -21,24 +24,14 @@ WOL_DAILY_URL = WOL_URL + WOL_DAILY_TEXT_PATH
 
 def start(update, context):
   chat_id = str(update.effective_chat.id)
-  message = 'Seja bem-vindo(a)! Use um dos seguintes comandos para começar:'
-  message += '\n\n/ajustar - Ajuste o seu horário de ler o texto diário.'
-  message += '\n\n/ler - Leia agora o texto para hoje.'
-  
-  # Commands menu
-  main_menu_keyboard = [[KeyboardButton('/ajustar')], [KeyboardButton('/ler')]]
-  reply_kb_markup = ReplyKeyboardMarkup(main_menu_keyboard,
-                                          resize_keyboard=True,
-                                          one_time_keyboard=True)
+  message = getGreetingMessage()
+  reply_kb_markup = getDefaultKeyboardButtons()              
 
-  # Send the message with menu
   context.bot.send_message(chat_id=chat_id, text=message, reply_markup=reply_kb_markup)
-  # update.message.reply_text(message)
-  # context.bot.send_message(chat_id=chat_id, text=message, parse_mode='Markdown')
 
 def getCurrentDailyText():
   db_daily_text = db.get('daily_text')
-  today = date.today().strftime('%d/%m/%Y')
+  today = getToday()
   
   # check if today's text exists in redis
   if db_daily_text != None:
@@ -77,13 +70,8 @@ def sendDailyText(update, context):
 
 def sendScheduleOptions(update, context):
   chat_id = str(update.effective_chat.id)
-  message = 'Ok, vamos ajustar seu horário. '
-  message += 'Escolha que horas você gostaria de receber o texto diário:'
-
-  main_menu_keyboard = [[KeyboardButton('07:00')], [KeyboardButton('08:00')], [KeyboardButton('09:00')]]
-  reply_kb_markup = ReplyKeyboardMarkup(main_menu_keyboard,
-                                          resize_keyboard=True,
-                                          one_time_keyboard=True)
+  message = getAdjustingScheduleMessage()
+  reply_kb_markup = getScheduleButtons()
 
   context.bot.send_message(chat_id=chat_id, text=message, reply_markup=reply_kb_markup)
 
@@ -92,34 +80,27 @@ def handleScheduleOption(update, context):
   match = re.search('^(?:(?:([01]?\d|2[0-3]):([0-5]?\d)))', selected_schedule)
 
   if match == None:
-    message = 'Desculpe, não entendi sua mensagem. Tente novamente.'
+    message = getUnknownScheduleOptionMessage()
     update.message.reply_text(message)
     return
 
   elif selected_schedule not in SCHEDULES_TIME:
-    message = 'Ops, por enquanto não contemplo esse horário. 🥲'
+    message = getNotInSchedulesMessage()
     update.message.reply_text(message)
     return
 
   chat_id = str(update.effective_chat.id)
-  # today = date.today().strftime('%d/%m/%Y')
   db_schedule = ('%s||%s' % (selected_schedule, ''))
-
   db.set(chat_id, db_schedule)
 
-  message = ('Ok, a partir de hoje você receberá o texto diário às %s horas. 😃🙏' % selected_schedule)
-
-  main_menu_keyboard = [[KeyboardButton('/ajustar')], [KeyboardButton('/ler')]]
-  reply_kb_markup = ReplyKeyboardMarkup(main_menu_keyboard,
-                                          resize_keyboard=True,
-                                          one_time_keyboard=True)
-
+  message = (getSetInScheduleMessage() % selected_schedule)
+  reply_kb_markup = getDefaultKeyboardButtons()
   context.bot.send_message(chat_id=chat_id, text=message, reply_markup=reply_kb_markup)
 
-def prepareSchedule():
+def sendSchedulesMessages():
   db_schedules_keys = db.keys()[1:]
-  today = date.today().strftime('%d/%m/%Y')
-  now = datetime.now().strftime('%H:%M')
+  today = getToday()
+  now = getNow()
   message = getCurrentDailyText()
 
   for chat_id in db_schedules_keys:
@@ -131,23 +112,22 @@ def prepareSchedule():
     if db_time == now:
       url_params = (TELEGRAM_TOKEN, chat_id, message, 'HTML')
       url = ('https://api.telegram.org/bot%s/sendMessage?chat_id=%s&text=%s&parse_mode=%s' % url_params)
-      response = requests.get(url)
-      print('schedule_response', response)
+      requests.get(url)
       
-      # update db_date
       new_schedule = ('%s||%s' % (db_time, today))
       db.set(chat_id, new_schedule)
 
 def startScheduler():
   for schedule_time in SCHEDULES_TIME:
-    schedule.every().day.at(schedule_time).do(prepareSchedule)
+    schedule.every().day.at(schedule_time).do(sendSchedulesMessages)
 
   while True:
     schedule.run_pending()
     time.sleep(1)
 
-def unknown(update, context):
-  update.message.reply_text('Desculpe, não entendi o que você quis dizer. Tente outro comando.')
+def handleUnknownCommand(update, context):
+  message = getUnknownCommandMessage()
+  update.message.reply_text(message)
 
 def main():
   """Start the bot."""
@@ -161,19 +141,19 @@ def main():
   dp.add_handler(CommandHandler('start', start))
   dp.add_handler(CommandHandler('ler', sendDailyText))
   dp.add_handler(CommandHandler('ajustar', sendScheduleOptions))
-  dp.add_handler(MessageHandler(Filters.command, unknown))
+  dp.add_handler(MessageHandler(Filters.command, handleUnknownCommand))
   dp.add_handler(MessageHandler(Filters.text, handleScheduleOption))
 
   # start the bot
   updater.start_webhook(listen='0.0.0.0', port=PORT, url_path=TELEGRAM_TOKEN)
-  updater.bot.setWebhook('https://daily-text-jw.herokuapp.com/'+TELEGRAM_TOKEN)
+  updater.bot.setWebhook(HEROKU_APP_URL+TELEGRAM_TOKEN)
 
   # Run the bot until you press Ctrl-C or the process receives SIGINT,
   # SIGTERM or SIGABRT. This should be used most of the time, since
   # start_polling() is non-blocking and will stop the bot gracefully.
   updater.idle()
   # updater.start_polling()
-  
+
   # start scheduler
   startScheduler()
 
