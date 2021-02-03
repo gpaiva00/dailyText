@@ -10,7 +10,7 @@ from config.settings import WOL_URL, WOL_DAILY_TEXT_PATH, TELEGRAM_TOKEN, PORT, 
 from utils.listToString import listToString
 from datetime import date, datetime
 
-db = redis.from_url(url=REDIS_URL, decode_responses=True)
+db = redis.from_url(REDIS_URL)
 
 # setting a logging to know when (and why) things don't work as expected
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
